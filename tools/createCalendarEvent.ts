@@ -1,36 +1,47 @@
 import { google } from "googleapis";
 import { oauth2Client } from "@/lib/googleAuth";
 
+const USER_TIMEZONE = "Asia/Karachi"; // PKT = UTC+5
+
 export async function createCalendarEvent(
-  title: string,
-  startTime: string,
-  endTime: string
+    title: string,
+    startTime: string,
+    endTime: string,
+    description?: string,
+    attendeeEmail?: string
 ) {
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-  const calendar = google.calendar({
-    version: "v3",
-    auth: oauth2Client
-  });
+    const requestBody: any = {
+        summary: title,
+        description: description || "",
+        start: {
+            dateTime: new Date(startTime).toISOString(),
+            timeZone: USER_TIMEZONE,
+        },
+        end: {
+            dateTime: new Date(endTime).toISOString(),
+            timeZone: USER_TIMEZONE,
+        },
+    };
 
-  // Convert provided times to proper Date objects
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-
-  const event = await calendar.events.insert({
-    calendarId: "primary",
-    requestBody: {
-      summary: title,
-      start: {
-        dateTime: start.toISOString()
-      },
-      end: {
-        dateTime: end.toISOString()
-      }
+    // Optionally invite the other person so it shows on their calendar too
+    if (attendeeEmail) {
+        requestBody.attendees = [{ email: attendeeEmail }];
+        requestBody.sendUpdates = "all"; // send Google Calendar invite email
     }
-  });
 
-  return {
-    message: "Calendar event created successfully",
-    eventId: event.data.id
-  };
+    const event = await calendar.events.insert({
+        calendarId: "primary",
+        requestBody,
+    });
+
+    return {
+        status: "created",
+        eventId: event.data.id,
+        title,
+        start: event.data.start?.dateTime,
+        end: event.data.end?.dateTime,
+        htmlLink: event.data.htmlLink,
+    };
 }
