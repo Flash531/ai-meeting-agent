@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<{ role: string; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: string; text: string; meeting?: any }[]>([]);
 
   const runAgent = async () => {
     if (!prompt) return;
@@ -22,7 +22,11 @@ export default function Home() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.text || "No response" },
+        {
+          role: "assistant",
+          text: data.text || "No response",
+          meeting: data.meeting || null,
+        },
       ]);
     } catch (error) {
       setMessages((prev) => [
@@ -83,6 +87,18 @@ export default function Home() {
                 {msg.role === "user" ? "You" : "Assistant"}
               </p>
               <p className="whitespace-pre-line">{msg.text}</p>
+              {msg.meeting && (
+                <div className="mt-3 p-3 rounded-lg border border-white/10 bg-black/60">
+                  <p className="text-xs text-neutral-400 mb-1">Scheduled Meeting</p>
+                  <p className="font-medium">{msg.meeting.title}</p>
+                  <p className="text-sm text-neutral-300">
+                    {msg.meeting.day} • {msg.meeting.time}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Duration: {msg.meeting.duration || "30 minutes"}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
 

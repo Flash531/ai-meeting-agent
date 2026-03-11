@@ -97,6 +97,8 @@ Your job is to:
 
   let finalText = result.text;
 
+  let meetingContext: any = null;
+
   if (!finalText && result.toolResults?.length) {
 
     const summary = await generateText({
@@ -188,67 +190,92 @@ or
         } catch {
           availability = { available: true };
         }
+      }
 
-        if (availability?.available) {
+      if (availability?.available) {
 
-          // Convert natural language time into a real datetime
-          const now = new Date();
+        // Convert natural language time into a real datetime
+        const now = new Date();
 
-          let meetingDate = new Date(now);
+        let meetingDate = new Date(now);
 
-          if (meetingData.day?.toLowerCase().includes("tomorrow")) {
+        if (meetingData.day) {
+          let dayText = meetingData.day.toLowerCase();
+
+          if (dayText.includes("tomorrow")) {
             meetingDate.setDate(now.getDate() + 1);
-          }
+          } else if (dayText.includes("today")) {
+            // keep today
+          } else {
+            // remove ordinal suffixes like 1st, 2nd, 3rd, 15th
+            dayText = dayText.replace(/(st|nd|rd|th)/g, "");
 
-          // Parse time like "3 pm"
-          let hours = 15; // default 3 PM
-          let minutes = 0;
+            const parsed = new Date(`${dayText} ${now.getFullYear()}`);
 
-          if (meetingData.time) {
-            const timeParsed = new Date(`1970-01-01 ${meetingData.time}`);
-
-            if (!isNaN(timeParsed.getTime())) {
-              hours = timeParsed.getHours();
-              minutes = timeParsed.getMinutes();
+            if (!isNaN(parsed.getTime())) {
+              meetingDate = parsed;
             }
           }
-
-          meetingDate.setHours(hours);
-          meetingDate.setMinutes(minutes);
-          meetingDate.setSeconds(0);
-
-          const startISO = meetingDate.toISOString();
-
-          // 30 minute meeting
-          const endDate = new Date(meetingDate.getTime() + 30 * 60000);
-          const endISO = endDate.toISOString();
-
-          await createCalendarEvent(
-            meetingData.title,
-            startISO,
-            endISO
-          );
-
-          const emailId = Array.isArray(result.toolResults?.[0]?.output)
-            ? (result.toolResults?.[0]?.output as any[])[0]?.id
-            : undefined;
-
-          if (emailId) {
-            await markEmailAsRead(emailId);
-          }
-
-          finalText = "Meeting scheduled successfully and email marked as read.";
-
-        } else {
-
-          finalText = "Requested meeting time conflicts with an existing calendar event.";
-
         }
+
+        // Parse time like "3 pm"
+        let hours = 15; // default 3 PM
+        let minutes = 0;
+
+        if (meetingData.time) {
+          const timeParsed = new Date(`1970-01-01 ${meetingData.time}`);
+
+          if (!isNaN(timeParsed.getTime())) {
+            hours = timeParsed.getHours();
+            minutes = timeParsed.getMinutes();
+          }
+        }
+
+        meetingDate.setHours(hours);
+        meetingDate.setMinutes(minutes);
+        meetingDate.setSeconds(0);
+
+        const startISO = meetingDate.toISOString();
+
+        // 30 minute meeting
+        const endDate = new Date(meetingDate.getTime() + 30 * 60000);
+        const endISO = endDate.toISOString();
+
+        await createCalendarEvent(
+          meetingData.title,
+          startISO,
+          endISO
+        );
+
+        const emailId = Array.isArray(result.toolResults?.[0]?.output)
+          ? (result.toolResults?.[0]?.output as any[])[0]?.id
+          : undefined;
+
+        if (emailId) {
+          await markEmailAsRead(emailId);
+        }
+
+        finalText = "Meeting scheduled successfully.";
+
+        meetingContext = {
+          title: meetingData.title || "Meeting from email",
+          day: meetingData.day || "today",
+          time: meetingData.time || "3 PM",
+          duration: "30 minutes"
+        };
+
+      } else {
+
+        finalText = "Requested meeting time conflicts with an existing calendar event.";
+
       }
+    } else {
+      finalText = "No meeting requests were found in your unread emails.";
     }
   }
 
   return Response.json({
-    text: finalText
+    text: finalText || "I checked your unread emails but couldn't find any meeting requests.",
+    meeting: meetingContext
   });
 }
