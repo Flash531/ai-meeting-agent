@@ -1,7 +1,7 @@
 import { google } from "googleapis";
-import { oauth2Client } from "@/lib/googleAuth";
+import { oauth2Client, loadTokensFromCookie } from "@/lib/googleAuth";
 
-const USER_TIMEZONE = "Asia/Karachi"; // PKT = UTC+5
+const USER_TIMEZONE = "Asia/Kolkata"; // IST = UTC+5:30
 
 export async function createCalendarEvent(
     title: string,
@@ -10,6 +10,7 @@ export async function createCalendarEvent(
     description?: string,
     attendeeEmail?: string
 ) {
+    await loadTokensFromCookie();
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
     const requestBody: any = {

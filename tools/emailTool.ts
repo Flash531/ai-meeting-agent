@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { oauth2Client } from "@/lib/googleAuth";
+import { oauth2Client, loadTokensFromCookie } from "@/lib/googleAuth";
 
 /** Extract the plain-text body from a Gmail message payload (handles multipart). */
 function extractBody(payload: any): string {
@@ -46,12 +46,13 @@ function parseFrom(from: string | null | undefined): {
 }
 
 export async function getUnreadEmails() {
+  await loadTokensFromCookie();
   const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
   const res = await gmail.users.messages.list({
     userId: "me",
-    q: "is:unread",
-    maxResults: 8,
+    q: "is:unread in:inbox newer_than:30d",
+    maxResults: 20,
   });
 
   const messages = res.data.messages || [];

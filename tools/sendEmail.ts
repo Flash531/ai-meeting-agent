@@ -1,8 +1,8 @@
 import { google } from "googleapis";
-import { oauth2Client } from "@/lib/googleAuth";
+import { oauth2Client, loadTokensFromCookie } from "@/lib/googleAuth";
 
 // User's local timezone — update this if you're in a different zone
-const USER_TIMEZONE = "Asia/Karachi"; // PKT = UTC+5
+const USER_TIMEZONE = "Asia/Kolkata"; // IST = UTC+5:30
 
 export async function sendEmail(
   to: string,
@@ -11,6 +11,7 @@ export async function sendEmail(
   /** Optional: original Message-ID header for threading replies */
   inReplyTo?: string
 ) {
+  await loadTokensFromCookie();
   const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
   // Build the RFC-2822 email

@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Aria — AI Meeting Assistant",
-  description: "Your personal AI that reads emails and schedules meetings automatically.",
+  title: "Ariel — AI Inbox Assistant",
+  description: "Ariel is your AI agent that reads Gmail, detects meeting requests, and schedules meetings automatically.",
 };
 
 export default function RootLayout({

@@ -1,4 +1,5 @@
 import { oauth2Client } from "@/lib/googleAuth";
+import { google } from "googleapis";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -7,30 +8,50 @@ export async function GET(req: Request) {
     const code = searchParams.get("code");
 
     if (!code) {
-      return NextResponse.json({
-        error: "Authorization code missing"
-      });
+      return NextResponse.redirect(new URL("/?auth=error", req.url));
     }
 
-    // Exchange authorization code for tokens
+    // Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
-
-    // Set credentials for future API calls
     oauth2Client.setCredentials(tokens);
 
-    console.log("Google OAuth Tokens:", tokens);
+    // Fetch user profile
+    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+    const { data: profile } = await oauth2.userinfo.get();
 
-    return NextResponse.json({
-      success: true,
-      message: "Authentication successful",
-      tokens
+    // Build the redirect response
+    const redirectUrl = new URL("/?auth=success", req.url);
+    const res = NextResponse.redirect(redirectUrl);
+
+    // Store tokens in an httpOnly cookie (7-day expiry)
+    res.cookies.set("g_tokens", JSON.stringify(tokens), {
+      httpOnly: true,
+      secure: false,      // set to true in production (https)
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
     });
 
+    // Store profile in a readable cookie so the frontend can show name/avatar
+    res.cookies.set(
+      "g_profile",
+      JSON.stringify({
+        name: profile.name,
+        email: profile.email,
+        picture: profile.picture,
+      }),
+      {
+        httpOnly: false,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      }
+    );
+
+    return res;
   } catch (error) {
-    console.error("OAuth Error:", error);
-
-    return NextResponse.json({
-      error: "Authentication failed"
-    });
+    console.error("OAuth callback error:", error);
+    return NextResponse.redirect(new URL("/?auth=error", req.url));
   }
 }

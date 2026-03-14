@@ -1,9 +1,10 @@
 
 
 import { google } from "googleapis";
-import { oauth2Client } from "@/lib/googleAuth";
+import { oauth2Client, loadTokensFromCookie } from "@/lib/googleAuth";
 
 export async function markEmailAsRead(messageId: string) {
+  await loadTokensFromCookie();
   const gmail = google.gmail({
     version: "v1",
     auth: oauth2Client

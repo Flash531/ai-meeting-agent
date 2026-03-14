@@ -1,7 +1,8 @@
 import { google } from "googleapis";
-import { oauth2Client } from "@/lib/googleAuth";
+import { oauth2Client, loadTokensFromCookie } from "@/lib/googleAuth";
 
 export async function getCalendarEvents() {
+  await loadTokensFromCookie();
 
   const calendar = google.calendar({
     version: "v3",
